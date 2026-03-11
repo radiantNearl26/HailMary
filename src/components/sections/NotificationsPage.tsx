@@ -7,7 +7,6 @@ import {
   ExternalLink,
   Loader2,
   Mail,
-  MessageSquare,
   Send,
   Smartphone,
 } from "lucide-react";
@@ -50,12 +49,6 @@ const methods = [
     description: "Get notified via your registered email",
     icon: Mail,
   },
-  {
-    id: "sms",
-    label: "SMS",
-    description: "Receive text message alerts on your phone",
-    icon: MessageSquare,
-  },
 ];
 
 export default function NotificationsPage({
@@ -66,7 +59,6 @@ export default function NotificationsPage({
   const [enabled, setEnabled] = useState<Record<string, boolean>>({
     push: true,
     email: true,
-    sms: false,
   });
 
   const [threshold, setThreshold] = useState("3");
