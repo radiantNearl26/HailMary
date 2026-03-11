@@ -1,65 +1,180 @@
-import Image from "next/image";
+"use client";
+
+import { useCallback, useSyncExternalStore, useState } from "react";
+import {
+  Bell,
+  ChartNoAxesCombined,
+  HomeIcon,
+  Plus,
+  Settings,
+} from "lucide-react";
+import { Dock, DockIcon } from "@/components/ui/dock";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import OverviewPage from "@/components/sections/OverviewPage";
+import NotificationsPage from "@/components/sections/NotificationsPage";
+import InsightsPage from "@/components/sections/InsightsPage";
+import SettingsPage from "@/components/sections/SettingsPage";
+import AddSubscriptionPage from "@/components/sections/AddSubscriptionPage";
+import { subscriptions } from "@/lib/subscriptions";
+
+const sections = [
+  {
+    label: "Overview",
+    icon: HomeIcon,
+    heading: "Overview",
+    description: "Manage your subscriptions",
+  },
+  {
+    label: "Notifications",
+    icon: Bell,
+    heading: "Notifications",
+    description: "Stay updated on billing alerts and reminders",
+  },
+  {
+    label: "Add Subscription",
+    icon: Plus,
+    heading: "Add Subscription",
+    description: "Track a new service or recurring payment",
+  },
+  {
+    label: "Insights",
+    icon: ChartNoAxesCombined,
+    heading: "Insights",
+    description: "Analyse your spending trends and patterns",
+  },
+  {
+    label: "Settings",
+    icon: Settings,
+    heading: "Settings",
+    description: "Configure your preferences and account details",
+  },
+];
 
 export default function Home() {
+  const [activeLabel, setActiveLabel] = useState("Overview");
+  const activeSection =
+    sections.find((s) => s.label === activeLabel) ?? sections[0];
+
+  const defaultNotifications = Object.fromEntries(
+    subscriptions.map((s) => [s.name, s.notification]),
+  );
+
+  const subscribe = useCallback((onChange: () => void) => {
+    const handler = (e: StorageEvent) => {
+      if (e.key === "sub-notifications") onChange();
+    };
+    window.addEventListener("storage", handler);
+    return () => window.removeEventListener("storage", handler);
+  }, []);
+
+  const getSnapshot = useCallback(() => {
+    return localStorage.getItem("sub-notifications") ?? "";
+  }, []);
+
+  const getServerSnapshot = useCallback(() => "", []);
+
+  const raw = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const notifications: Record<string, boolean> = raw
+    ? (JSON.parse(raw) as Record<string, boolean>)
+    : defaultNotifications;
+
+  const [, forceUpdate] = useState(0);
+
+  const toggleNotification = (name: string) => {
+    const next = { ...notifications, [name]: !notifications[name] };
+    localStorage.setItem("sub-notifications", JSON.stringify(next));
+    forceUpdate((n) => n + 1);
+  };
+
+  const renderPage = () => {
+    switch (activeLabel) {
+      case "Overview":
+        return (
+          <OverviewPage
+            notifications={notifications}
+            toggleNotification={toggleNotification}
+          />
+        );
+      case "Notifications":
+        return (
+          <NotificationsPage
+            notifications={notifications}
+            toggleNotification={toggleNotification}
+          />
+        );
+      case "Add Subscription":
+        return <AddSubscriptionPage />;
+      case "Insights":
+        return <InsightsPage />;
+      case "Settings":
+        return <SettingsPage />;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="relative h-svh overflow-hidden bg-muted/30">
+      <div className="flex h-full flex-col p-6 md:p-8">
+        <div className="mt-6 flex-1 overflow-y-auto pb-28 pr-1">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold tracking-tight">
+              {activeSection.heading}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {activeSection.description}
+            </p>
+          </div>
+
+          {renderPage()}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      </div>
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
+        <TooltipProvider>
+          <Dock
+            className="pointer-events-auto"
+            iconSize={42}
+            iconMagnification={64}
+            direction="middle"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+            {sections.map((item) => {
+              const Icon = item.icon;
+              const isActive = item.label === activeLabel;
+              return (
+                <DockIcon key={item.label}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-12 cursor-pointer rounded-full hover:bg-black/10 dark:hover:bg-white/15"
+                        aria-label={item.label}
+                        onClick={() => setActiveLabel(item.label)}
+                      >
+                        <Icon
+                          className={
+                            isActive ? "size-4 fill-current" : "size-4"
+                          }
+                        />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" sideOffset={6}>
+                      <p>{item.label}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </DockIcon>
+              );
+            })}
+          </Dock>
+        </TooltipProvider>
+      </div>
     </div>
   );
 }
