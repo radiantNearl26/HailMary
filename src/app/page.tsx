@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useSyncExternalStore, useState } from "react";
-import { Bell, ChartNoAxesCombined, HomeIcon, Plus } from "lucide-react";
+import {
+  Bell,
+  ChartNoAxesCombined,
+  CircleUserRound,
+  HomeIcon,
+  Plus,
+} from "lucide-react";
 import { Dock, DockIcon } from "@/components/ui/dock";
 import { Button } from "@/components/ui/button";
 import OverviewPage from "@/components/sections/OverviewPage";
@@ -28,6 +34,12 @@ const sections = [
     icon: ChartNoAxesCombined,
     heading: "Insights",
     description: "Analyse your spending trends and patterns",
+  },
+  {
+    label: "Profile",
+    icon: CircleUserRound,
+    heading: "Profile",
+    description: "View your account details and preferences",
   },
 ];
 
