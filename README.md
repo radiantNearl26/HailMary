@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Hail Mary - Subscription Manager
 
-## Getting Started
+A modern subscription management web application that helps users track, manage, and analyze their recurring subscriptions.
+Technologies Used
+Frontend Framework
 
-First, run the development server:
+    Next.js 16 - React framework with App Router for server-side rendering and routing
+    React 19 - UI component library with hooks for state management
+    TypeScript - Type-safe JavaScript for better developer experience
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Styling
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+    Tailwind CSS 4 - Utility-first CSS framework for responsive design
+    tw-animate-css - Animation utilities for smooth transitions
+    class-variance-authority - For creating component variants
+    tailwind-merge - Intelligent class merging for Tailwind
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+UI Components
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+    shadcn/ui - Accessible, customizable component library built on Radix UI
+    Radix UI - Unstyled, accessible UI primitives (Dialog, Dropdown, Select, Switch, etc.)
+    Lucide React - Icon library with 1000+ icons
+    Recharts - Composable charting library for data visualization
+    Vaul - Drawer component for mobile-friendly modals
+    Sonner - Toast notification system
+    cmdk - Command menu component
 
-## Learn More
+Forms & Validation
 
-To learn more about Next.js, take a look at the following resources:
+    React Hook Form - Performant form handling with minimal re-renders
+    Zod - TypeScript-first schema validation
+    @hookform/resolvers - Zod integration for React Hook Form
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Data Fetching
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+    SWR - React hooks for data fetching with caching and revalidation
 
-## Deploy on Vercel
+Date Handling
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+    date-fns - Modern JavaScript date utility library
+    react-day-picker - Flexible date picker component
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Implementation Details
+Authentication Flow
+
+User authentication is handled through Supabase Auth with email/password login. Sessions are managed client-side using the Supabase JS client with automatic token refresh.
+Database Schema
+
+The subscriptions table stores user subscription data with Row Level Security policies ensuring users can only access their own data. Columns include name, amount, category, billing frequency, and billing date.
+State Management
+
+A React Context (SubscriptionProvider) manages global subscription state, providing CRUD operations that sync with the Supabase database. Components consume this context via the useSubscriptions hook.
+Responsive Design
+
+The app uses a mobile-first approach with Tailwind's responsive prefixes. A floating dock navigation at the bottom provides easy access to all sections on mobile and desktop.
+Data Visualization
+
+The Insights page uses Recharts to display spending trends, category breakdowns, and budget tracking through area charts, pie charts, and bar charts.
+Features
+
+    Add, edit, and delete subscriptions
+    Track billing frequency (weekly, monthly, quarterly, yearly)
+    Categorize subscriptions
+    View spending insights and analytics
+    Budget tracking
+    Notification preferences

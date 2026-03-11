@@ -107,6 +107,14 @@ export default function Home() {
         );
       case "Insights":
         return <InsightsPage subscriptions={subs} />;
+      case "Profile":
+        return (
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed bg-card py-20 text-center">
+            <p className="text-sm text-muted-foreground">
+              🚧 This page is currently under development. Check back soon!
+            </p>
+          </div>
+        );
       default:
         return null;
     }
