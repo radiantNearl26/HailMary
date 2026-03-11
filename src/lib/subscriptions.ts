@@ -91,3 +91,40 @@ export function getDaysLeft(renewalDateStr: string): number {
     (renewal.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
   );
 }
+
+const STORAGE_KEY = "sub-all";
+
+/** Read all subscriptions — defaults + any user-added ones persisted in localStorage */
+export function getAllSubscriptions(): Subscription[] {
+  if (typeof window === "undefined") return subscriptions;
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) return JSON.parse(stored) as Subscription[];
+  return subscriptions;
+}
+
+/** Persist a new subscription and return the updated list */
+export function addSubscription(sub: Subscription): Subscription[] {
+  const current = getAllSubscriptions();
+  const updated = [...current, sub];
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  return updated;
+}
+
+/** Update a subscription by original name and return the updated list */
+export function updateSubscription(
+  originalName: string,
+  updated: Subscription,
+): Subscription[] {
+  const current = getAllSubscriptions();
+  const list = current.map((s) => (s.name === originalName ? updated : s));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  return list;
+}
+
+/** Delete a subscription by name and return the updated list */
+export function deleteSubscription(name: string): Subscription[] {
+  const current = getAllSubscriptions();
+  const list = current.filter((s) => s.name !== name);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  return list;
+}

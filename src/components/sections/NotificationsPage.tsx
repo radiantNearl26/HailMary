@@ -1,8 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Bell, BellOff, Mail, MessageSquare, Smartphone } from "lucide-react";
+import {
+  Bell,
+  BellOff,
+  ExternalLink,
+  Loader2,
+  Mail,
+  MessageSquare,
+  Send,
+  Smartphone,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -18,9 +29,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { subscriptions } from "@/lib/subscriptions";
+import { type Subscription } from "@/lib/subscriptions";
 
 interface NotificationsPageProps {
+  subscriptions: Subscription[];
   notifications: Record<string, boolean>;
   toggleNotification: (name: string) => void;
 }
@@ -47,6 +59,7 @@ const methods = [
 ];
 
 export default function NotificationsPage({
+  subscriptions,
   notifications,
   toggleNotification,
 }: NotificationsPageProps) {
@@ -58,8 +71,58 @@ export default function NotificationsPage({
 
   const [threshold, setThreshold] = useState("3");
 
+  const [sending, setSending] = useState(false);
+  const [emailResult, setEmailResult] = useState<{
+    success: boolean;
+    previewUrl?: string;
+    error?: string;
+  } | null>(null);
+
   const toggle = (id: string) =>
     setEnabled((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  async function sendDemoEmail() {
+    setSending(true);
+    setEmailResult(null);
+
+    const enabledSubs = subscriptions.filter(
+      (s) => notifications[s.name] ?? true,
+    );
+
+    try {
+      const res = await fetch("/api/send-reminder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subscriptions: enabledSubs.map((s) => ({
+            name: s.name,
+            amount: s.amount,
+            renewalDate: s.renewalDate,
+            frequency: s.frequency,
+          })),
+          threshold,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setEmailResult({ success: true, previewUrl: data.previewUrl });
+      } else {
+        setEmailResult({
+          success: false,
+          error: data.error || "Unknown error",
+        });
+      }
+    } catch {
+      setEmailResult({
+        success: false,
+        error: "Network error — is the dev server running?",
+      });
+    } finally {
+      setSending(false);
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -75,20 +138,66 @@ export default function NotificationsPage({
             </p>
           </div>
 
-          <Select value={threshold} onValueChange={setThreshold}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Heads-up before" />
-            </SelectTrigger>
-            <SelectContent position="popper">
-              <SelectItem value="1">1 day before</SelectItem>
-              <SelectItem value="3">3 days before</SelectItem>
-              <SelectItem value="5">5 days before</SelectItem>
-              <SelectItem value="7">1 week before</SelectItem>
-              <SelectItem value="14">2 weeks before</SelectItem>
-              <SelectItem value="30">1 month before</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={threshold} onValueChange={setThreshold}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Heads-up before" />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                <SelectItem value="1">1 day before</SelectItem>
+                <SelectItem value="3">3 days before</SelectItem>
+                <SelectItem value="5">5 days before</SelectItem>
+                <SelectItem value="7">1 week before</SelectItem>
+                <SelectItem value="14">2 weeks before</SelectItem>
+                <SelectItem value="30">1 month before</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="cursor-pointer gap-1.5"
+              disabled={sending}
+              onClick={sendDemoEmail}
+            >
+              {sending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Send className="size-4" />
+              )}
+              {sending ? "Sending…" : "Send Demo"}
+            </Button>
+          </div>
         </div>
+
+        {emailResult && (
+          <div className="mt-4">
+            {emailResult.success ? (
+              <Alert className="border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950">
+                <Mail className="size-4 text-green-600 dark:text-green-400" />
+                <AlertTitle className="text-green-800 dark:text-green-300">
+                  Demo email sent successfully!
+                </AlertTitle>
+                <AlertDescription className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                  <a
+                    href={emailResult.previewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-medium underline underline-offset-4 hover:text-green-900 dark:hover:text-green-200"
+                  >
+                    Open preview in Ethereal
+                    <ExternalLink className="size-3" />
+                  </a>
+                </AlertDescription>
+              </Alert>
+            ) : (
+              <Alert variant="destructive">
+                <AlertTitle>Failed to send demo email</AlertTitle>
+                <AlertDescription>{emailResult.error}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+        )}
         <div className="mt-4 space-y-3">
           {methods.map((method) => {
             const Icon = method.icon;

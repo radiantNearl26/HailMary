@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Bell } from "lucide-react";
 import Table03 from "@/components/table-03";
 import {
@@ -10,11 +11,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { subscriptions, getDaysLeft } from "@/lib/subscriptions";
+import { type Subscription, getDaysLeft } from "@/lib/subscriptions";
 
 interface OverviewPageProps {
+  subscriptions: Subscription[];
   notifications: Record<string, boolean>;
   toggleNotification: (name: string) => void;
+  onSubscriptionsChange: (updated: Subscription[]) => void;
 }
 
 const serviceIcons: Record<string, React.ReactNode> = {
@@ -93,16 +96,40 @@ const serviceIcons: Record<string, React.ReactNode> = {
   ),
 };
 
-const UPCOMING_THRESHOLD_DAYS = 30;
+const avatarColors = [
+  "bg-rose-500",
+  "bg-amber-500",
+  "bg-emerald-500",
+  "bg-sky-500",
+  "bg-violet-500",
+  "bg-pink-500",
+  "bg-teal-500",
+  "bg-indigo-500",
+  "bg-orange-500",
+  "bg-cyan-500",
+];
+
+function getAvatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return avatarColors[Math.abs(hash) % avatarColors.length];
+}
 
 export default function OverviewPage({
+  subscriptions,
   notifications,
   toggleNotification,
+  onSubscriptionsChange,
 }: OverviewPageProps) {
-  const upcomingBills = subscriptions
-    .map((s) => ({ ...s, daysLeft: getDaysLeft(s.renewalDate) }))
-    .filter((s) => s.daysLeft >= 0 && s.daysLeft <= UPCOMING_THRESHOLD_DAYS)
-    .sort((a, b) => a.daysLeft - b.daysLeft);
+  const upcomingBills = useMemo(
+    () =>
+      subscriptions
+        .map((s) => ({ ...s, daysLeft: getDaysLeft(s.renewalDate) }))
+        .sort((a, b) => a.daysLeft - b.daysLeft),
+    [subscriptions],
+  );
 
   return (
     <div className="space-y-8">
@@ -126,9 +153,15 @@ export default function OverviewPage({
               return (
                 <Card key={bill.name} className="w-[280px]">
                   <CardHeader className="flex flex-row items-center gap-3">
-                    <div className="flex size-11 shrink-0 items-center justify-center rounded-[30%] bg-muted">
+                    <div
+                      className={`flex size-11 shrink-0 items-center justify-center rounded-[30%] ${
+                        serviceIcons[bill.name]
+                          ? "bg-muted"
+                          : getAvatarColor(bill.name)
+                      }`}
+                    >
                       {serviceIcons[bill.name] ?? (
-                        <span className="text-lg font-bold">
+                        <span className="text-lg font-bold text-white">
                           {bill.name[0]}
                         </span>
                       )}
@@ -185,7 +218,10 @@ export default function OverviewPage({
 
       <section>
         <div className="mt-4">
-          <Table03 />
+          <Table03
+            subscriptions={subscriptions}
+            onSubscriptionsChange={onSubscriptionsChange}
+          />
         </div>
       </section>
     </div>

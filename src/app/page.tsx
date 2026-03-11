@@ -1,27 +1,14 @@
 "use client";
 
 import { useCallback, useSyncExternalStore, useState } from "react";
-import {
-  Bell,
-  ChartNoAxesCombined,
-  HomeIcon,
-  Plus,
-  Settings,
-} from "lucide-react";
+import { Bell, ChartNoAxesCombined, HomeIcon, Plus } from "lucide-react";
 import { Dock, DockIcon } from "@/components/ui/dock";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import OverviewPage from "@/components/sections/OverviewPage";
 import NotificationsPage from "@/components/sections/NotificationsPage";
 import InsightsPage from "@/components/sections/InsightsPage";
-import SettingsPage from "@/components/sections/SettingsPage";
-import AddSubscriptionPage from "@/components/sections/AddSubscriptionPage";
-import { subscriptions } from "@/lib/subscriptions";
+import AddSubscriptionDialog from "@/components/AddSubscriptionDialog";
+import { getAllSubscriptions, type Subscription } from "@/lib/subscriptions";
 
 const sections = [
   {
@@ -37,22 +24,10 @@ const sections = [
     description: "Stay updated on billing alerts and reminders",
   },
   {
-    label: "Add Subscription",
-    icon: Plus,
-    heading: "Add Subscription",
-    description: "Track a new service or recurring payment",
-  },
-  {
     label: "Insights",
     icon: ChartNoAxesCombined,
     heading: "Insights",
     description: "Analyse your spending trends and patterns",
-  },
-  {
-    label: "Settings",
-    icon: Settings,
-    heading: "Settings",
-    description: "Configure your preferences and account details",
   },
 ];
 
@@ -61,8 +36,10 @@ export default function Home() {
   const activeSection =
     sections.find((s) => s.label === activeLabel) ?? sections[0];
 
+  const [subs, setSubs] = useState<Subscription[]>(() => getAllSubscriptions());
+
   const defaultNotifications = Object.fromEntries(
-    subscriptions.map((s) => [s.name, s.notification]),
+    subs.map((s) => [s.name, s.notification]),
   );
 
   const subscribe = useCallback((onChange: () => void) => {
@@ -85,6 +62,11 @@ export default function Home() {
     : defaultNotifications;
 
   const [, forceUpdate] = useState(0);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+
+  const handleSubscriptionAdded = (updated: Subscription[]) => {
+    setSubs(updated);
+  };
 
   const toggleNotification = (name: string) => {
     const next = { ...notifications, [name]: !notifications[name] };
@@ -97,23 +79,22 @@ export default function Home() {
       case "Overview":
         return (
           <OverviewPage
+            subscriptions={subs}
             notifications={notifications}
             toggleNotification={toggleNotification}
+            onSubscriptionsChange={setSubs}
           />
         );
       case "Notifications":
         return (
           <NotificationsPage
+            subscriptions={subs}
             notifications={notifications}
             toggleNotification={toggleNotification}
           />
         );
-      case "Add Subscription":
-        return <AddSubscriptionPage />;
       case "Insights":
-        return <InsightsPage />;
-      case "Settings":
-        return <SettingsPage />;
+        return <InsightsPage subscriptions={subs} />;
       default:
         return null;
     }
@@ -137,44 +118,88 @@ export default function Home() {
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
-        <TooltipProvider>
-          <Dock
-            className="pointer-events-auto"
-            iconSize={42}
-            iconMagnification={64}
-            direction="middle"
-          >
-            {sections.map((item) => {
-              const Icon = item.icon;
-              const isActive = item.label === activeLabel;
-              return (
-                <DockIcon key={item.label}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-12 cursor-pointer rounded-full hover:bg-black/10 dark:hover:bg-white/15"
-                        aria-label={item.label}
-                        onClick={() => setActiveLabel(item.label)}
-                      >
-                        <Icon
-                          className={
-                            isActive ? "size-4 fill-current" : "size-4"
-                          }
-                        />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" sideOffset={6}>
-                      <p>{item.label}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </DockIcon>
-              );
-            })}
-          </Dock>
-        </TooltipProvider>
+        <Dock
+          className="pointer-events-auto"
+          iconSize={42}
+          iconMagnification={64}
+          direction="middle"
+        >
+          {sections.slice(0, 2).map((item) => {
+            const Icon = item.icon;
+            const isActive = item.label === activeLabel;
+            return (
+              <DockIcon key={item.label}>
+                <div className="group relative flex items-center justify-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-12 cursor-pointer rounded-full hover:bg-black/10 dark:hover:bg-white/15"
+                    aria-label={item.label}
+                    onClick={() => setActiveLabel(item.label)}
+                  >
+                    <Icon
+                      className={isActive ? "size-4 fill-current" : "size-4"}
+                    />
+                  </Button>
+                  <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1 text-xs text-background opacity-0 transition-opacity group-hover:opacity-100">
+                    {item.label}
+                  </span>
+                </div>
+              </DockIcon>
+            );
+          })}
+
+          {/* Add Subscription — center, blue circle */}
+          <DockIcon>
+            <div className="group relative flex items-center justify-center">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-12 cursor-pointer rounded-full bg-blue-500/15 text-blue-600 hover:bg-blue-500/25 dark:bg-blue-400/15 dark:text-blue-400 dark:hover:bg-blue-400/25"
+                aria-label="Add Subscription"
+                onClick={() => setAddDialogOpen(true)}
+              >
+                <Plus className="size-4" />
+              </Button>
+              <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1 text-xs text-background opacity-0 transition-opacity group-hover:opacity-100">
+                Add Subscription
+              </span>
+            </div>
+          </DockIcon>
+
+          {sections.slice(2).map((item) => {
+            const Icon = item.icon;
+            const isActive = item.label === activeLabel;
+            return (
+              <DockIcon key={item.label}>
+                <div className="group relative flex items-center justify-center">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-12 cursor-pointer rounded-full hover:bg-black/10 dark:hover:bg-white/15"
+                    aria-label={item.label}
+                    onClick={() => setActiveLabel(item.label)}
+                  >
+                    <Icon
+                      className={isActive ? "size-4 fill-current" : "size-4"}
+                    />
+                  </Button>
+                  <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2.5 py-1 text-xs text-background opacity-0 transition-opacity group-hover:opacity-100">
+                    {item.label}
+                  </span>
+                </div>
+              </DockIcon>
+            );
+          })}
+        </Dock>
       </div>
+
+      <AddSubscriptionDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        showTrigger={false}
+        onSubscriptionAdded={handleSubscriptionAdded}
+      />
     </div>
   );
 }
